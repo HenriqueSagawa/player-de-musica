@@ -1,113 +1,224 @@
+"use client";
+
+import { Avatar, Button, Card } from "@nextui-org/react";
+import { useEffect } from "react";
+import AOS from "aos";
 import Image from "next/image";
+import heroImg from "@/../public/assets/img/headerImg.jpg";
+
+import "aos/dist/aos.css";
 
 export default function Home() {
+  useEffect(() => {
+    AOS.init({
+      duration: 1000,
+      once: true,
+    });
+  }, []);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
+    <div className="container mx-auto px-4">
+      <section className="flex flex-col lg:flex-row items-center justify-between gap-12 min-h-[calc(100vh-80px)] py-16 relative" data-aos="fade-up">
+        <div className="absolute inset-20 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-500/20 blur-3xl -z-10" />
+        <div className="flex-1 space-y-8 max-w-2xl">
+          <h1 className="text-6xl font-extrabold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent leading-tight">
+            Sua música, sua vibe, seu momento
+          </h1>
+          <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed">
+            Descubra milhões de músicas, crie suas playlists personalizadas e compartilhe seus momentos musicais favoritos.
+          </p>
+          <div className="flex gap-6">
+            <Button
+              color="secondary"
+              variant="shadow"
+              size="lg"
+              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 font-semibold"
+            >
+              Começar agora
+            </Button>
+            <Button 
+              variant="bordered"
+              color="secondary"
+              size="lg"
+              className="font-semibold"
+            >
+              Saiba mais
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex-1 relative w-full max-w-xl" data-aos="fade-left">
+          <div className="relative w-full h-[500px] rounded-2xl overflow-hidden">
+            <Image 
+              src={heroImg} 
+              alt="Hero" 
+              fill
+              className="object-cover brightness-75"
               priority
             />
-          </a>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+      <section className="py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-pink-500/10 blur-2xl -z-10" />
+        <h2 className="text-4xl font-bold text-center mb-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent" data-aos="fade-up">
+          Recursos Incríveis para sua Experiência Musical
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <Card className="p-6 space-y-4 bg-gradient-to-br from-blue-600/5 via-transparent to-cyan-500/5 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="100">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold">Biblioteca Ilimitada</h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              Acesse milhões de músicas de diferentes gêneros e artistas do mundo todo.
+            </p>
+          </Card>
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
+          <Card className="p-6 space-y-4 bg-gradient-to-br from-purple-600/5 via-transparent to-pink-500/5 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="200">
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-500 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold">Playlists Personalizadas</h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              Crie e compartilhe playlists únicas baseadas em seus gostos musicais.
+            </p>
+          </Card>
+
+          <Card className="p-6 space-y-4 bg-gradient-to-br from-orange-500/5 via-transparent to-pink-500/5 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="300">
+            <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold">Alta Qualidade</h3>
+            <p className="text-gray-600 dark:text-gray-300">
+              Desfrute de streaming em alta definição com qualidade de áudio excepcional.
+            </p>
+          </Card>
+        </div>
+      </section>
+
+      <section className="py-24 bg-gradient-to-r from-blue-600/5 via-purple-600/5 to-pink-500/5 rounded-3xl relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 to-pink-500/10 blur-3xl -z-10" />
+        <div className="text-center space-y-8 max-w-4xl mx-auto px-4" data-aos="fade-up">
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
+            Estatísticas Impressionantes
           </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-2" data-aos="fade-up" data-aos-delay="100">
+              <p className="text-4xl font-bold text-blue-600">+10M</p>
+              <p className="text-gray-600 dark:text-gray-300">Músicas Disponíveis</p>
+            </div>
+            <div className="space-y-2" data-aos="fade-up" data-aos-delay="200">
+              <p className="text-4xl font-bold text-purple-600">+500K</p>
+              <p className="text-gray-600 dark:text-gray-300">Usuários Ativos</p>
+            </div>
+            <div className="space-y-2" data-aos="fade-up" data-aos-delay="300">
+              <p className="text-4xl font-bold text-pink-500">+1M</p>
+              <p className="text-gray-600 dark:text-gray-300">Playlists Criadas</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
+      <section className="py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/10 via-transparent to-pink-500/10 blur-2xl -z-10" />
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent" data-aos="fade-up">
+            Depoimentos dos Usuários
           </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card className="p-6 bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5 backdrop-blur-sm" data-aos="fade-right">
+              <p className="text-gray-600 dark:text-gray-300 italic">"A melhor plataforma de música que já usei. Interface incrível e som de qualidade!"</p>
+              <div className="mt-4 flex items-center gap-4">
+                <Avatar
+                  className="w-12 h-12"
+                  src="https://i.pravatar.cc/150?u=maria"
+                  name="Maria Silva"
+                />
+                <div>
+                  <p className="font-semibold">Maria Silva</p>
+                  <p className="text-sm text-gray-500">Usuária Premium</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-6 bg-gradient-to-br from-purple-600/5 via-transparent to-pink-500/5 backdrop-blur-sm" data-aos="fade-left">
+              <p className="text-gray-600 dark:text-gray-300 italic">"As playlists personalizadas são simplesmente perfeitas! Sempre descobrindo novas músicas."</p>
+              <div className="mt-4 flex items-center gap-4">
+                <Avatar
+                  className="w-12 h-12"
+                  src="https://i.pravatar.cc/150?u=joao" 
+                  name="João Santos"
+                />
+                <div>
+                  <p className="font-semibold">João Santos</p>
+                  <p className="text-sm text-gray-500">Usuário Premium</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </section>
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
+      <section className="py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-pink-500/10 blur-2xl -z-10" />
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent" data-aos="fade-up">
+            Nossa Equipe
           </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card className="p-6 text-center bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="100">
+              <Avatar
+                className="w-32 h-32 mx-auto mb-4"
+                src="https://i.pravatar.cc/150?u=samuel"
+                name="Samuel Lopes"
+              />
+              <h3 className="text-xl font-semibold">Samuel Σαμουήλ</h3>
+              <p className="text-gray-600 dark:text-gray-300">CEO</p>
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                Responsável pela ideia e desenvolvimento do projeto.
+              </p>
+            </Card>
+            <Card className="p-6 text-center bg-gradient-to-br from-purple-600/5 via-transparent to-pink-500/5 backdrop-blur-sm" data-aos="fade-up" data-aos-delay="300">
+              <Avatar
+                className="w-32 h-32 mx-auto mb-4"
+                src="https://i.pravatar.cc/150?u=pedro"
+                name="Pedro Santos"
+              />
+              <h3 className="text-xl font-semibold">Henrique Sagawa</h3>
+              <p className="text-gray-600 dark:text-gray-300">Desenvolvedor</p>
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                Responsável pela parte de produto e desenvolvimento.
+              </p>
+            </Card>
+          </div>
+        </div>
+      </section>
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
+      <section className="py-24 text-center relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-pink-500/20 blur-3xl -z-10" />
+        <div className="max-w-3xl mx-auto px-4 space-y-8" data-aos="fade-up">
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
+            Comece a Sua Jornada Musical Hoje
           </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
+          <p className="text-xl text-gray-600 dark:text-gray-300">
+            Junte-se a milhares de usuários e descubra um novo mundo de possibilidades musicais.
           </p>
-        </a>
-      </div>
-    </main>
+          <Button 
+            size="lg"
+            className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white font-semibold"
+          >
+            Criar Conta Gratuita
+          </Button>
+        </div>
+      </section>
+    </div>
   );
 }
