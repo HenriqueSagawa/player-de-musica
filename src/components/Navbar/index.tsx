@@ -1,13 +1,13 @@
 'use client';
 
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Avatar, DropdownItem, DropdownTrigger, Dropdown, DropdownMenu, Button, NavbarMenuToggle, NavbarMenu, NavbarMenuItem } from "@nextui-org/react";
+import { Spinner,Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Avatar, DropdownItem, DropdownTrigger, Dropdown, DropdownMenu, Button, NavbarMenuToggle, NavbarMenu, NavbarMenuItem } from "@nextui-org/react";
 import { ToggleTheme } from "../ToggleTheme";
 import { RiNeteaseCloudMusicFill } from "react-icons/ri";
 import { useState } from "react";
-
+import { useSession, signOut } from "next-auth/react";
 export function NavbarComponent() {
-    const [isOLogin, setIsLogin] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { data: session, status } = useSession();
 
     const menuItems = [
         {label: "Home", href: "/"},
@@ -51,7 +51,9 @@ export function NavbarComponent() {
                 </NavbarItem>
 
                 <NavbarItem>
-                    {isOLogin ? (
+                    {status == "loading" ? (
+                        <Spinner color="secondary"/>
+                    ) : session && status == "authenticated"? (
                         <Dropdown placement="bottom-end">
                             <DropdownTrigger>
                                 <Avatar
@@ -59,31 +61,28 @@ export function NavbarComponent() {
                                     as="button"
                                     className="transition-transform"
                                     color="secondary"
-                                    name="Jason Hughes"
+                                    name={session.user?.name as string}
                                     size="sm"
-                                    src="https://i.pravatar.cc/150?u=a042581f4e29026704d"
+                                    src={session.user?.image as string}
                                 />
                             </DropdownTrigger>
                             <DropdownMenu aria-label="Profile Actions" variant="flat">
                                 <DropdownItem key="profile" className="h-14 gap-2">
                                     <div>
-                                        <p className="font-semibold">Signed in as</p>
-                                        <p className="font-semibold">zoey@example.com</p>
+                                        <p className="font-semibold">conectado como</p>
+                                        <p className="font-semibold">{session?.user?.email}</p>
                                     </div>
                                 </DropdownItem>
-                                <DropdownItem key="settings">My Settings</DropdownItem>
-                                <DropdownItem key="team_settings">Team Settings</DropdownItem>
-                                <DropdownItem key="analytics">Analytics</DropdownItem>
-                                <DropdownItem key="system">System</DropdownItem>
-                                <DropdownItem key="configurations">Configurations</DropdownItem>
-                                <DropdownItem key="help_and_feedback">Help & Feedback</DropdownItem>
-                                <DropdownItem key="logout" color="danger">
+                                <DropdownItem key="settings"><Link href="/dashboard" color="foreground" className="text-sm w-full h-full">Meu Perfil</Link></DropdownItem>
+                                <DropdownItem onClick={() => signOut()} key="logout" color="danger">
                                     Log Out
                                 </DropdownItem>
                             </DropdownMenu>
                         </Dropdown>
                     ) : (
-                        <Button variant="flat" color="secondary">Login</Button>
+                        <Link href="/login">
+                            <Button variant="flat" color="secondary">Login</Button>
+                        </Link>
                     )}
                 </NavbarItem>
             </NavbarContent>
