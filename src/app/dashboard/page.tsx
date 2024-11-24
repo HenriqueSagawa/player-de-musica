@@ -2,8 +2,8 @@
 
 import { getSession, signIn, signOut, useSession } from "next-auth/react";
 import { Button, Card, CardBody, CardHeader, Input, Spinner, Tabs, Tab, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Avatar, Select, SelectItem } from "@nextui-org/react";
-import { useState, useEffect } from "react";
-import { FaEdit, FaPlus, FaCamera, FaMusic } from "react-icons/fa";
+import { useState, useEffect, useRef } from "react";
+import { FaEdit, FaPlus, FaCamera, FaMusic, FaPlay, FaPause, FaStepBackward, FaStepForward } from "react-icons/fa";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,13 @@ import { db } from "@/services/firebaseConnection"
 import { collection, query, orderBy, where, onSnapshot, } from "firebase/firestore"
 import { toast } from "react-hot-toast";
 import Image from "next/image";
+import { InputFile } from "@/components/inputFile";
+import { createMusic } from "@/services/musicService";
+
+interface MusicFormData {
+    title: string;
+    artist: string;
+}
 
 interface DashboardProps {
     session: any;
@@ -31,9 +38,22 @@ export default function Dashboard() {
     const [albums, setAlbums] = useState<any[]>([]);
     const [selectedAlbum, setSelectedAlbum] = useState<any>(null);
     const [musics, setMusics] = useState<any[]>([]);
+    const [albumMusics, setAlbumMusics] = useState<any[]>([]);
     const [musicFile, setMusicFile] = useState<File | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string>("");
+    const [musicUrl, setMusicUrl] = useState<string>("");
+    const [uploadError, setUploadError] = useState<string>("");
+    const [formData, setFormData] = useState<MusicFormData>({
+        title: "",
+        artist: "",
+    });
+    const [isFormValid, setIsFormValid] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentMusic, setCurrentMusic] = useState<any>(null);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const audioRef = useRef<HTMLAudioElement>(null);
 
     const UserSchema = z.object({
         name: z.string().min(1, { message: "Nome é obrigatório" }),
@@ -49,9 +69,9 @@ export default function Dashboard() {
     });
 
     const MusicSchema = z.object({
-        name: z.string().min(1, { message: "Nome da música é obrigatório" }),
-        albumId: z.string().min(1, { message: "Álbum é obrigatório" }),
-        musicFile: z.any()
+        title: z.string().min(1, "Título é obrigatório"),
+        artist: z.string().min(1, "Artista é obrigatório"),
+        albumId: z.string().min(1, "Álbum é obrigatório")
     });
 
     const router = useRouter();
@@ -67,10 +87,10 @@ export default function Dashboard() {
         if (!serverSession?.user?.email) return;
 
         console.log("chegou aqui" + serverSession?.user?.email);
-        
+
         const albunsRef = collection(db, "albums");
         const q = query(
-            albunsRef, 
+            albunsRef,
             where("userEmail", "==", serverSession?.user?.email),
         );
 
@@ -79,7 +99,7 @@ export default function Dashboard() {
                 id: doc.id,
                 ...doc.data()
             }));
-            
+
             setAlbums(lista);
         });
 
@@ -88,10 +108,10 @@ export default function Dashboard() {
 
     useEffect(() => {
         if (!serverSession?.user?.email) return;
-        
+
         const musicsRef = collection(db, "musics");
         const q = query(
-            musicsRef, 
+            musicsRef,
             where("userEmail", "==", serverSession?.user?.email),
         );
 
@@ -100,12 +120,19 @@ export default function Dashboard() {
                 id: doc.id,
                 ...doc.data()
             }));
-            
+
             setMusics(lista);
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [serverSession?.user?.email]);
+
+    useEffect(() => {
+        if (selectedAlbum) {
+            const albumMusics = musics.filter(music => music.albumId === selectedAlbum.id);
+            setAlbumMusics(albumMusics);
+        }
+    }, [selectedAlbum, musics]);
 
     type UserData = z.infer<typeof UserSchema>;
     type AlbumData = z.infer<typeof AlbumSchema>;
@@ -239,18 +266,28 @@ export default function Dashboard() {
     const onMusicSubmit = async (data: MusicData) => {
         try {
             setLoading(true);
-            // Aqui você implementaria a lógica para salvar a música
-            console.log("Música a ser salva:", {
-                name: data.name,
+
+            if (!serverSession?.user?.email || !musicUrl) {
+                toast.error("Usuário não autenticado ou arquivo de música não selecionado");
+                return;
+            }
+
+            await createMusic({
+                title: data.title,
+                artist: data.artist,
                 albumId: data.albumId,
-                file: musicFile
+                musicUrl,
+                userEmail: serverSession.user.email
             });
-            
+
+            toast.success("Música adicionada com sucesso!");
             resetMusicForm();
             setMusicFile(null);
+            setMusicUrl("");
             onMusicClose();
         } catch (error) {
             console.error("Erro ao criar música:", error);
+            toast.error("Erro ao criar música");
         } finally {
             setLoading(false);
         }
@@ -261,6 +298,33 @@ export default function Dashboard() {
         onViewAlbumOpen();
     };
 
+    const handleMusicUploadComplete = (url: string) => {
+        setMusicUrl(url);
+        setUploadError("");
+    };
+
+    const handleMusicUploadError = (error: string) => {
+        setUploadError(error);
+        setMusicUrl("");
+    };
+
+    const validateForm = () => {
+        const isValid = formData.title.trim() !== "" &&
+            formData.artist.trim() !== "";
+        setIsFormValid(isValid);
+    };
+
+    useEffect(() => {
+        validateForm();
+    }, [formData]);
+
+    const handleInputChange = (field: keyof MusicFormData, value: string) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
     if (status === "loading") {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -269,7 +333,65 @@ export default function Dashboard() {
         )
     }
 
-    console.log(albums);
+    const handlePlayPause = () => {
+        if (audioRef.current) {
+            if (isPlaying) {
+                audioRef.current.pause();
+            } else {
+                audioRef.current.play();
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+
+    const handleTimeUpdate = () => {
+        if (audioRef.current) {
+            setCurrentTime(audioRef.current.currentTime);
+        }
+    };
+
+    const handleLoadedMetadata = () => {
+        if (audioRef.current) {
+            setDuration(audioRef.current.duration);
+        }
+    };
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const time = Number(e.target.value);
+        if (audioRef.current) {
+            audioRef.current.currentTime = time;
+            setCurrentTime(time);
+        }
+    };
+
+    const formatTime = (time: number) => {
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    };
+
+    const handlePlayMusic = (music: any) => {
+        setCurrentMusic(music);
+        setIsPlaying(true);
+        if (audioRef.current) {
+            audioRef.current.src = music.musicUrl;
+            audioRef.current.play();
+        }
+    };
+
+    const handleNext = () => {
+        const currentIndex = albumMusics.findIndex(music => music.id === currentMusic.id);
+        if (currentIndex < albumMusics.length - 1) {
+            handlePlayMusic(albumMusics[currentIndex + 1]);
+        }
+    };
+    
+    const handlePrevious = () => {
+        const currentIndex = albumMusics.findIndex(music => music.id === currentMusic.id);
+        if (currentIndex > 0) {
+            handlePlayMusic(albumMusics[currentIndex - 1]);
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -313,40 +435,15 @@ export default function Dashboard() {
                         <Modal isOpen={isOpen} onClose={onClose}>
                             <ModalContent>
                                 <form onSubmit={handleSubmit(onSubmit)}>
-                                    <ModalHeader>Editar Informações</ModalHeader>
+                                    <ModalHeader>Editar Perfil</ModalHeader>
                                     <ModalBody>
-                                        <div className="space-y-4">
-                                            <div className="flex flex-col items-center gap-4">
-                                                <div className="relative">
-                                                    <Avatar
-                                                        isBordered
-                                                        color="secondary"
-                                                        src={photoURL}
-                                                        className="w-24 h-24 text-large"
-                                                    />
-                                                    <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-secondary text-white p-2 rounded-full cursor-pointer">
-                                                        <FaCamera size={16} />
-                                                    </label>
-                                                    <input
-                                                        id="photo-upload"
-                                                        type="file"
-                                                        accept="image/*"
-                                                        className="hidden"
-                                                        onChange={handleImageChange}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <Input
-                                                {...register("name")}
-                                                label="Nome"
-                                                variant="bordered"
-                                                errorMessage={errors.name?.message}
-                                                isInvalid={!!errors.name}
-                                            />
-
-                                            <p className="text-sm text-gray-500 text-center">Ao fazer isso, você será desconectado e será necessário fazer login novamente</p>
-
-                                        </div>
+                                        <Input
+                                            {...register("name")}
+                                            label="Nome"
+                                            variant="bordered"
+                                            errorMessage={errors.name?.message}
+                                            isInvalid={!!errors.name}
+                                        />
                                     </ModalBody>
                                     <ModalFooter>
                                         <Button color="danger" variant="light" onPress={onClose}>
@@ -377,8 +474,8 @@ export default function Dashboard() {
                             </Card>
 
                             {albums.map((album) => (
-                                <Card 
-                                    key={album.id} 
+                                <Card
+                                    key={album.id}
                                     isPressable
                                     className="h-64 transition-all hover:scale-102 bg-gradient-to-br from-gray-900 to-gray-800"
                                     onPress={() => handleViewAlbum(album)}
@@ -386,10 +483,10 @@ export default function Dashboard() {
                                     <CardBody className="flex flex-col justify-between p-6 relative overflow-hidden">
                                         <div className="relative z-10">
                                             <div className="mb-4 relative">
-                                                <Image 
-                                                    src={album.coverImage} 
-                                                    alt="Capa do álbum" 
-                                                    width={100} 
+                                                <Image
+                                                    src={album.coverImage}
+                                                    alt="Capa do álbum"
+                                                    width={100}
                                                     height={100}
                                                     className="rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
                                                 />
@@ -402,6 +499,74 @@ export default function Dashboard() {
                                     </CardBody>
                                 </Card>
                             ))}
+                        </div>
+
+                        <div className="min-h-screen flex flex-col">
+                            {currentMusic && (
+                                <div className="z-[999] fixed bottom-0 left-0 right-0 bg-gray-900 p-4 shadow-lg">
+                                    <div className="container mx-auto flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-white">
+                                                <h4 className="font-semibold">{currentMusic.title}</h4>
+                                                <p className="text-sm text-gray-400">{currentMusic.artist}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col items-center flex-1 mx-8">
+                                            <div className="flex items-center gap-4">
+                                                <Button
+                                                    isIconOnly
+                                                    color="default"
+                                                    variant="light"
+                                                    onClick={handlePrevious}
+                                                    isDisabled={currentMusic === 0}
+                                                >
+                                                    <FaStepBackward />
+                                                </Button>
+
+                                                <Button
+                                                    isIconOnly
+                                                    color="default"
+                                                    variant="light"
+                                                    onClick={handlePlayPause}
+                                                >
+                                                    {isPlaying ? <FaPause /> : <FaPlay />}
+                                                </Button>
+
+                                                <Button
+                                                    isIconOnly
+                                                    color="default"
+                                                    variant="light"
+                                                    onClick={handleNext}
+                                                    isDisabled={currentMusic === albumMusics.length - 1}
+                                                >
+                                                    <FaStepForward />
+                                                </Button>
+                                            </div>
+
+                                            <div className="w-full flex items-center gap-2">
+                                                <span className="text-xs text-white">{formatTime(currentTime)}</span>
+                                                <input
+                                                    type="range"
+                                                    min={0}
+                                                    max={duration}
+                                                    value={currentTime}
+                                                    onChange={handleSeek}
+                                                    className="w-full"
+                                                />
+                                                <span className="text-xs text-white">{formatTime(duration)}</span>
+                                            </div>
+                                        </div>
+
+                                        <audio
+                                            ref={audioRef}
+                                            onTimeUpdate={handleTimeUpdate}
+                                            onLoadedMetadata={handleLoadedMetadata}
+                                            onEnded={() => setIsPlaying(false)}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <Modal
@@ -419,9 +584,9 @@ export default function Dashboard() {
                                                     <label className="cursor-pointer">
                                                         <div className="w-48 h-48 border-2 border-dashed rounded-lg flex items-center justify-center">
                                                             {previewUrl ? (
-                                                                <img 
-                                                                    src={previewUrl} 
-                                                                    alt="Preview" 
+                                                                <img
+                                                                    src={previewUrl}
+                                                                    alt="Preview"
                                                                     className="w-full h-full object-cover rounded-lg"
                                                                 />
                                                             ) : (
@@ -473,40 +638,80 @@ export default function Dashboard() {
                             </ModalContent>
                         </Modal>
 
-                        <Modal 
-                            isOpen={isViewAlbumOpen} 
+                        <Modal
+                            isOpen={isViewAlbumOpen}
                             onClose={onViewAlbumClose}
                             placement="center"
+                            size="2xl"
                         >
                             <ModalContent>
                                 {selectedAlbum && (
                                     <>
-                                        <ModalHeader>{selectedAlbum.title}</ModalHeader>
+                                        <ModalHeader className="flex gap-3">
+                                            <div>
+                                                <h2 className="text-2xl font-bold">{selectedAlbum.title}</h2>
+                                                <p className="text-sm text-gray-500">{selectedAlbum.artist}</p>
+                                            </div>
+                                        </ModalHeader>
                                         <ModalBody>
                                             <div className="space-y-6">
-                                                <div className="flex justify-center">
-                                                    {selectedAlbum.coverImage ? (
-                                                        <Image
-                                                            src={selectedAlbum.coverImage}
-                                                            alt={selectedAlbum.title}
-                                                            width={200}
-                                                            height={200}
-                                                            className="rounded-lg shadow-lg"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-[200px] h-[200px] bg-gray-200 rounded-lg flex items-center justify-center">
-                                                            <FaMusic size={40} className="text-gray-400" />
+                                                <div className="flex gap-6">
+                                                    <div className="w-48">
+                                                        {selectedAlbum.coverImage ? (
+                                                            <Image
+                                                                src={selectedAlbum.coverImage}
+                                                                alt={selectedAlbum.title}
+                                                                width={200}
+                                                                height={200}
+                                                                className="rounded-lg shadow-lg"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-[200px] h-[200px] bg-gray-200 rounded-lg flex items-center justify-center">
+                                                                <FaMusic size={40} className="text-gray-400" />
+                                                            </div>
+                                                        )}
+                                                        <div className="mt-4">
+                                                            <p className="text-sm text-gray-500">Ano de Lançamento</p>
+                                                            <p className="text-lg">{selectedAlbum.releaseYear}</p>
                                                         </div>
-                                                    )}
-                                                </div>
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <h4 className="text-sm font-semibold text-gray-500">Artista</h4>
-                                                        <p className="text-lg">{selectedAlbum.artist}</p>
                                                     </div>
-                                                    <div>
-                                                        <h4 className="text-sm font-semibold text-gray-500">Ano de Lançamento</h4>
-                                                        <p className="text-lg">{selectedAlbum.releaseYear}</p>
+
+                                                    <div className="flex-1">
+                                                        <h3 className="text-xl font-semibold mb-4">Músicas</h3>
+                                                        {albumMusics.length > 0 ? (
+                                                            <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                                                                {musics.map((music) => (
+                                                                    <Card
+                                                                        key={music.id}
+                                                                        className="h-28"
+                                                                    >
+                                                                        <CardBody className="flex flex-col justify-between p-6">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <div>
+                                                                                    <h3 className="mb-2 text-xl font-semibold">{music.title}</h3>
+                                                                                    <p className="text-sm text-gray-500">
+                                                                                        {albums.find(album => album.id === music.albumId)?.title || "Álbum não encontrado"}
+                                                                                    </p>
+                                                                                </div>
+                                                                                <div className="mt-4 flex items-center gap-2">
+                                                                                    <Button
+                                                                                        isIconOnly
+                                                                                        color="primary"
+                                                                                        variant="light"
+                                                                                        onClick={() => handlePlayMusic(music)}
+                                                                                    >
+                                                                                        <FaPlay />
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </CardBody>
+                                                                    </Card>
+                                                                ))}
+
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-gray-500">Nenhuma música adicionada ainda.</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -538,13 +743,13 @@ export default function Dashboard() {
                             </Card>
 
                             {musics.map((music) => (
-                                <Card 
+                                <Card
                                     key={music.id}
                                     className="h-52"
                                 >
                                     <CardBody className="flex flex-col justify-between p-6">
                                         <div>
-                                            <h3 className="mb-2 text-xl font-semibold">{music.name}</h3>
+                                            <h3 className="mb-2 text-xl font-semibold">{music.title}</h3>
                                             <p className="text-sm text-gray-500">
                                                 {albums.find(album => album.id === music.albumId)?.title || "Álbum não encontrado"}
                                             </p>
@@ -569,13 +774,21 @@ export default function Dashboard() {
                                         <ModalBody>
                                             <div className="space-y-4">
                                                 <Input
-                                                    {...registerMusic("name")}
+                                                    {...registerMusic("title")}
                                                     label="Nome da Música"
                                                     variant="bordered"
-                                                    errorMessage={musicErrors.name?.message}
-                                                    isInvalid={!!musicErrors.name}
+                                                    errorMessage={musicErrors.title?.message}
+                                                    isInvalid={!!musicErrors.title}
                                                 />
-                                                
+
+                                                <Input
+                                                    {...registerMusic("artist")}
+                                                    label="Artista"
+                                                    variant="bordered"
+                                                    errorMessage={musicErrors.artist?.message}
+                                                    isInvalid={!!musicErrors.artist}
+                                                />
+
                                                 <Select
                                                     {...registerMusic("albumId")}
                                                     label="Álbum"
@@ -590,21 +803,19 @@ export default function Dashboard() {
                                                     ))}
                                                 </Select>
 
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                        Arquivo de Música
-                                                    </label>
-                                                    <input
-                                                        type="file"
-                                                        accept="audio/*"
-                                                        onChange={handleMusicFileChange}
-                                                        className="block w-full text-sm text-gray-500
-                                                        file:mr-4 file:py-2 file:px-4
-                                                        file:rounded-full file:border-0
-                                                        file:text-sm file:font-semibold
-                                                        file:bg-violet-50 file:text-violet-700
-                                                        hover:file:bg-violet-100"
+                                                <div className="mt-4">
+                                                    <InputFile
+                                                        onUploadComplete={handleMusicUploadComplete}
+                                                        onUploadError={handleMusicUploadError}
                                                     />
+                                                    {uploadError && (
+                                                        <p className="text-red-500 text-sm mt-2">{uploadError}</p>
+                                                    )}
+                                                    {musicUrl && (
+                                                        <div className="mt-2">
+                                                            <audio controls src={musicUrl} className="w-full" />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </ModalBody>

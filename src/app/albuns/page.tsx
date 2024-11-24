@@ -1,19 +1,26 @@
 "use client";
 
-import { Card, Image, Button, Skeleton, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
-import { useEffect, useState } from "react";
+import { Card, Image, Button, Skeleton, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, CardBody } from "@nextui-org/react";
+import { useEffect, useState, useRef } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { db } from "@/services/firebaseConnection";
-import { collection, query, onSnapshot } from "firebase/firestore";
+import { collection, query, onSnapshot, where } from "firebase/firestore";
+import { FaMusic, FaPlay, FaPause, FaStepForward, FaStepBackward } from "react-icons/fa";
 
 export default function Albuns() {
   const [albums, setAlbums] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAlbum, setSelectedAlbum] = useState<any>(null);
+  const [albumMusics, setAlbumMusics] = useState<any[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [currentPage, setCurrentPage] = useState(1);
   const albumsPerPage = 9;
+  const [currentMusicIndex, setCurrentMusicIndex] = useState<number>(-1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   useEffect(() => {
     AOS.init({
@@ -39,9 +46,96 @@ export default function Albuns() {
     return () => unsubscribe();
   }, []);
 
-  const handleAlbumClick = (album: any) => {
+  const handleAlbumClick = async (album: any) => {
     setSelectedAlbum(album);
+    setCurrentMusicIndex(-1);
+    setIsPlaying(false);
+    
+    const musicsRef = collection(db, "musics");
+    const q = query(musicsRef, where("albumId", "==", album.id));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const musics = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAlbumMusics(musics);
+    });
+
     onOpen();
+  };
+
+  const handlePlayPause = (index: number) => {
+    if (currentMusicIndex === index) {
+      if (isPlaying) {
+        audioRef.current?.pause();
+      } else {
+        audioRef.current?.play();
+      }
+      setIsPlaying(!isPlaying);
+    } else {
+      setCurrentMusicIndex(index);
+      setIsPlaying(true);
+      if (audioRef.current) {
+        audioRef.current.src = albumMusics[index].musicUrl; // Alterado de url para musicUrl
+        audioRef.current.play()
+          .catch(error => {
+            console.error("Erro ao tocar música:", error);
+            setIsPlaying(false);
+          });
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentMusicIndex > 0) {
+      setCurrentMusicIndex(currentMusicIndex - 1);
+      if (audioRef.current) {
+        audioRef.current.src = albumMusics[currentMusicIndex - 1].musicUrl; // Alterado de url para musicUrl
+        audioRef.current.play()
+          .catch(error => {
+            console.error("Erro ao tocar música anterior:", error);
+            setIsPlaying(false);
+          });
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const handleNext = () => {
+    if (currentMusicIndex < albumMusics.length - 1) {
+      setCurrentMusicIndex(currentMusicIndex + 1);
+      if (audioRef.current) {
+        audioRef.current.src = albumMusics[currentMusicIndex + 1].musicUrl; // Alterado de url para musicUrl
+        audioRef.current.play()
+          .catch(error => {
+            console.error("Erro ao tocar próxima música:", error);
+            setIsPlaying(false);
+          });
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
   };
 
   // Cálculo para paginação
@@ -57,111 +151,56 @@ export default function Albuns() {
 
   return (
     <div className="container mx-auto px-4 py-16">
-      <div className="relative mb-16" data-aos="fade-up">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-500/20 blur-3xl -z-10" />
-        <h1 className="text-7xl font-extrabold text-center mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
-          Álbuns em Destaque
-        </h1>
-        <p className="text-2xl text-gray-600 dark:text-gray-300 text-center max-w-3xl mx-auto">
-          Explore nossa seleção cuidadosamente curada de álbuns excepcionais
-        </p>
-      </div>
+      <h1 className="text-4xl font-bold text-center mb-12 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
+        Álbuns Disponíveis
+      </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {loading ? (
-          // Skeletons enquanto carrega
-          [...Array(6)].map((_, index) => (
-            <Card key={index} className="h-[500px]" data-aos="fade-up">
-              <Skeleton className="h-[200px] rounded-none" />
-              <div className="p-8 space-y-4">
-                <Skeleton className="h-8 w-3/4 rounded-lg" />
-                <Skeleton className="h-6 w-1/2 rounded-lg" />
-                <Skeleton className="h-4 w-1/3 rounded-lg" />
-                <div className="flex gap-3">
-                  <Skeleton className="h-8 w-24 rounded-full" />
-                  <Skeleton className="h-8 w-24 rounded-full" />
-                </div>
-                <Skeleton className="h-12 w-full rounded-lg" />
-              </div>
-            </Card>
-          ))
-        ) : (
-          currentAlbums.map((album) => (
-            <Card 
-              key={album.id}
-              className="group hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-500/10 backdrop-blur-sm border border-white/10"
-              data-aos="fade-up"
-            >
-              <div className="relative h-[500px]">
-                <Image
-                  src={album.coverImage || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819"}
-                  alt={album.title}
-                  radius="none"
-                  classNames={{
-                    img: "object-cover w-screen h-[200px] brightness-90 group-hover:brightness-100 transition-all duration-300"
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-lg">
-                  <div className="absolute -bottom-0 left-0 right-0 p-8 space-y-4">
-                    <h3 className="text-3xl font-bold text-white bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">{album.title}</h3>
-                    <p className="text-lg text-gray-200">{album.artist}</p>
-                    <p className="text-sm text-gray-400">Postado por: {album.userEmail}</p>
-                    <div className="flex gap-3">
-                      <span className="px-4 py-2 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-500/20 backdrop-blur-md rounded-full text-sm font-medium text-white">
-                        {album.genre || "Música"}
-                      </span>
-                      <span className="px-4 py-2 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-500/20 backdrop-blur-md rounded-full text-sm font-medium text-white">
-                        {album.releaseYear}
-                      </span>
-                    </div>
-                    <Button
-                      color="secondary"
-                      variant="shadow"
-                      className="w-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 font-semibold text-lg py-6"
-                      onClick={() => handleAlbumClick(album)}
-                    >
-                      Ver Informações
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Paginação */}
-      {!loading && totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-8">
-          <Button
-            color="secondary"
-            variant="flat"
-            isDisabled={currentPage === 1}
-            onClick={() => paginate(currentPage - 1)}
-          >
-            Anterior
-          </Button>
-          
-          {[...Array(totalPages)].map((_, index) => (
-            <Button
-              key={index + 1}
-              color={currentPage === index + 1 ? "secondary" : "default"}
-              variant={currentPage === index + 1 ? "solid" : "flat"}
-              onClick={() => paginate(index + 1)}
-            >
-              {index + 1}
-            </Button>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, index) => (
+            <Skeleton key={index} className="h-[400px] rounded-lg" />
           ))}
-
-          <Button
-            color="secondary"
-            variant="flat"
-            isDisabled={currentPage === totalPages}
-            onClick={() => paginate(currentPage + 1)}
-          >
-            Próxima
-          </Button>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {currentAlbums.map((album) => (
+              <Card 
+                key={album.id}
+                isPressable
+                className="cursor-pointer hover:scale-105 transition-transform duration-200"
+                onClick={() => handleAlbumClick(album)}
+                data-aos="fade-up"
+              >
+                <Image
+                  removeWrapper
+                  alt={album.title}
+                  className="w-full h-[300px] object-cover"
+                  src={album.coverImage || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819"}
+                />
+                <CardBody className="p-4">
+                  <h2 className="text-xl font-bold">{album.title}</h2>
+                  <p className="text-gray-500">{album.artist}</p>
+                  <p className="text-sm text-gray-400">{album.releaseYear}</p>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-8 gap-2">
+              {[...Array(totalPages)].map((_, index) => (
+                <Button
+                  key={index}
+                  color={currentPage === index + 1 ? "primary" : "default"}
+                  onClick={() => paginate(index + 1)}
+                >
+                  {index + 1}
+                </Button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <Modal isOpen={isOpen} onClose={onClose} size="2xl">
@@ -199,6 +238,78 @@ export default function Albuns() {
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-8">
+                  <h3 className="text-xl font-bold mb-4">Músicas do Álbum</h3>
+                  {albumMusics.length > 0 ? (
+                    <div className="space-y-4">
+                      <audio 
+                        ref={audioRef}
+                        onTimeUpdate={handleTimeUpdate}
+                        onEnded={() => handleNext()}
+                        className="hidden"
+                      />
+                      {albumMusics.map((music, index) => (
+                        <div 
+                          key={music.id} 
+                          className={`flex items-center gap-4 p-4 rounded-lg ${
+                            currentMusicIndex === index 
+                              ? 'bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-500/20' 
+                              : 'bg-gray-100 dark:bg-gray-800'
+                          }`}
+                        >
+                          <Button
+                            isIconOnly
+                            className="min-w-[40px]"
+                            onClick={() => handlePlayPause(index)}
+                          >
+                            {currentMusicIndex === index && isPlaying ? (
+                              <FaPause className="text-gray-600" />
+                            ) : (
+                              <FaPlay className="text-gray-600" />
+                            )}
+                          </Button>
+                          <div className="flex-grow">
+                            <h4 className="font-semibold">{music.title}</h4>
+                            <p className="text-sm text-gray-500">{music.artist}</p>
+                          </div>
+                          {currentMusicIndex === index && (
+                            <div className="flex items-center gap-4 flex-grow">
+                              <Button
+                                isIconOnly
+                                onClick={handlePrevious}
+                                isDisabled={currentMusicIndex === 0}
+                              >
+                                <FaStepBackward />
+                              </Button>
+                              <div className="flex-grow flex items-center gap-2">
+                                <span className="text-sm">{formatTime(currentTime)}</span>
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={duration || 0}
+                                  value={currentTime}
+                                  onChange={handleSeek}
+                                  className="w-full"
+                                />
+                                <span className="text-sm">{formatTime(duration)}</span>
+                              </div>
+                              <Button
+                                isIconOnly
+                                onClick={handleNext}
+                                isDisabled={currentMusicIndex === albumMusics.length - 1}
+                              >
+                                <FaStepForward />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Nenhuma música adicionada a este álbum ainda.</p>
+                  )}
+                </div>
               </ModalBody>
               <ModalFooter>
                 <Button color="danger" variant="light" onPress={onClose}>
@@ -209,24 +320,6 @@ export default function Albuns() {
           )}
         </ModalContent>
       </Modal>
-
-      <Card className="mt-16 p-12 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-500/10 backdrop-blur-sm text-center" data-aos="fade-up">
-        <h2 className="text-4xl font-bold mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
-          Descubra Mais Música
-        </h2>
-        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
-          Milhares de álbuns são adicionados à nossa coleção todos os dias. 
-          Não perca nenhum lançamento!
-        </p>
-        <Button
-          size="lg"
-          color="secondary"
-          variant="shadow"
-          className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500"
-        >
-          Ver Todos os Álbuns
-        </Button>
-      </Card>
     </div>
   );
 }
