@@ -1,4 +1,4 @@
-# 🎵 Music Player
+# 🎵 Player de Música do Samuca
 
 Este repositório contém o projeto de um **Player de Música**, desenvolvido como atividade prática para a disciplina de **Programação Web Orientada a Objetos** do curso **Técnico em Informática para Internet Integrado ao Ensino Médio**, oferecido pelo **Instituto Federal do Paraná (IFPR) - Campus Assis Chateaubriand**.
 
